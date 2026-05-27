@@ -51,8 +51,8 @@ sy = np.hypot(tey0, y0/L)
 
 beta_func_KEDR = 100 #cm
 epsilon = 25
-#aplha function equals 0 into KEDR
-
+alpha_func_KEDR = 5
+"""
 def beam_generator(epsilon):
     gfKEDR = gamma_func_KEDR(beta_func_KEDR)
     r = sqrt(epsilon / gfKEDR)
@@ -61,5 +61,14 @@ def beam_generator(epsilon):
     r0 = 0 #r0 = -phi * alpha/gamma, alpha_KEDR == 0
 
     distribution = pdf(r, phi, phi0, r0)
-
+    return 0
+"""
+def beam_generator():
+    """Function that generates beam distribution using np.random and other numpy tools. Should be equals to the pdf"""
+    gfKEDR = gamma_func_KEDR(beta_func_KEDR)
+    r = sqrt(epsilon / gfKEDR)
+    phi = sqrt(epsilon / beta_func_KEDR)
+    phi0 = -r * alpha_func_KEDR/beta_func_KEDR 
+    r0 = -phi * alpha_func_KEDR/gfKEDR 
     
+
