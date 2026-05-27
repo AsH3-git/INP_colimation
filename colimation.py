@@ -39,5 +39,27 @@ def ellipsoid_hole(x, y, a, b):
         return 0
 def gamma_func_KEDR(beta_func_KEDR):
     return 1 / beta_func_KEDR
+
 #pdf -- particle distribution function
-def pdf(r, phi, phi0, r0, )
+def pdf(r, phi, phi0, r0, sx=0.5, sy=1):
+    x = (r*cos(phi) - r0*cos(phi0))/sx
+    y = (r*sin(phi) - r0*sin(phi0))/sy
+    return r*exp(-0.5*x**2 - 0.5*y**2) / 2/pi/sx/sy
+
+sx = np.hypot(tex0, x0/L)
+sy = np.hypot(tey0, y0/L)
+
+beta_func_KEDR = 100 #cm
+epsilon = 25
+#aplha function equals 0 into KEDR
+
+def beam_generator(epsilon):
+    gfKEDR = gamma_func_KEDR(beta_func_KEDR)
+    r = sqrt(epsilon / gfKEDR)
+    phi = sqrt(epsilon / beta_func_KEDR)
+    phi0 = 0 #phi0 = -r * alpha/beta but alpha_KEDR == 0
+    r0 = 0 #r0 = -phi * alpha/gamma, alpha_KEDR == 0
+
+    distribution = pdf(r, phi, phi0, r0)
+
+    
