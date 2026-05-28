@@ -69,20 +69,9 @@ def beam_generator(alpha_func, beta_func, epsilon):
     x = np.arange(-coord_disp, coord_disp, 0.5)
     x0_hatch = -x[::-1] * alpha_func/beta_func
     rng = np.random.default_rng()
-    """
-    epsilon_disp1 = np.linspace(-sqrt(epsilon * gf), sqrt(epsilon gfKEDR = gamma_func_KEDR(beta_func_KEDR)
-    r = sqrt(epsilon / gfKEDR)
-    phi = sqrt(epsilon / beta_func_KEDR)
-    phi0 = 0 #phi0 = -r * alpha/beta but alpha_KEDR == 0
-    r0 = 0 #r0 = -phi * alpha/gamma, alpha_KEDR == 0
-/ beta_func), len(x)//2)
+    epsilon_disp1 = np.linspace(-sqrt(epsilon * gf), sqrt(epsilon / beta_func), len(x)//2)
     epsilon_disp2 = np.linspace(sqrt(epsilon / beta_func), sqrt(epsilon * gf), (len(x)//2 + 1))
     epsilon_disp = np.concatenate((epsilon_disp1, epsilon_disp2))
-    """
-    epsilon_disp1 = np.linspace(-sqrt(epsilon * gf), sqrt(epsilon / beta_func), len(x)//2)
-    epsilon_disp2 = np.linspace(sqrt(epsilon / beta_func), 0, (len(x)//2 + 1))
-    epsilon_disp = np.concatenate((epsilon_disp2, epsilon_disp1))
-    """
     for i in range(len(x0_hatch)):
         radius = epsilon_disp[i]
         if (x0_hatch[i] < 0) and (radius < 0):
@@ -97,8 +86,7 @@ def beam_generator(alpha_func, beta_func, epsilon):
             total_distr = angle_dot
         else:
             total_distr = np.concatenate((total_distr, angle_dot))
-    """
-#    np.savetxt("2d_distr.txt", total_distr)
+    np.savetxt("2d_distr.txt", total_distr)
 
     """
     zero_level = phi0
