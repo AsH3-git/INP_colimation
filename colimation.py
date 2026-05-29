@@ -39,8 +39,8 @@ def ellipsoid_hole(x, y, a, b):
         return 1
     else:
         return 0
-def gamma_func(beta_func):
-    return 1 / beta_func
+def gamma_func(alpha_func, beta_func):
+    return (1 + alpha_func**2)/ beta_func
 
 #pdf -- particle distribution function
 def pdf(r, phi, phi0, r0, sx=0.5, sy=1):
@@ -53,7 +53,7 @@ sy = np.hypot(tey0, y0/L)
 
 def beam_generator(alpha_func, beta_func, epsilon):
     """Function that generates beam distribution using np.random and other numpy tools. Should be equals to the pdf"""
-    gf = gamma_func(beta_func)
+    gf = gamma_func(alpha_func, beta_func)
     coord_disp = sqrt(epsilon * beta_func)
     x = np.arange(-coord_disp, coord_disp, 0.5)
     x0_hatch = -x * alpha_func/beta_func
