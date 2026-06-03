@@ -5,6 +5,7 @@ import time
 from math import sin, cos, sqrt, pi, exp, atan2, hypot
 from scipy.integrate import quad, nquad
 from scipy.special import erf, i0
+import scipy.stats as stats
 from constants import *
 
 tex0 = 0.0001779/10
@@ -53,6 +54,23 @@ sy = np.hypot(tey0, y0/L)
 
 def beam_generator(alpha_x, alpha_y, beta_x, beta_y, eps_x, eps_y):
     """Function that generates beam distribution using np.random and other numpy tools. Should be equals to the pdf"""
+    mu_x, sigma_x = 0, 1         # Mean and standard deviation
+    lower_bound_x = -5 * sigma_x # -5 sigma
+    upper_bound_x = 5 * sigma_x  # +5 sigma
+
+    # Truncnorm requires standard bounds scaled by sigma
+    a_x = (lower_bound_x - mu_x) / sigma_x
+    b_x = (upper_bound_x - mu_x) / sigma_x
+
+    mu_y, sigma_y = 0, 1.2         # Mean and standard deviation
+    lower_bound_y = -5 * sigma_y # -5 sigma
+    upper_bound_y = 5 * sigma_y  # +5 sigma
+
+    # Truncnorm requires standard bounds scaled by sigma
+    a_y = (lower_bound_y - mu_y) / sigma_y
+    b_y = (upper_bound_y - mu_y) / sigma_y
+
+
     gf_x = gamma_func(alpha_x, beta_x)
     gf_y = gamma_func(alpha_y, beta_y)
     coord_disp_x = sqrt(eps_x * beta_x)
@@ -61,10 +79,14 @@ def beam_generator(alpha_x, alpha_y, beta_x, beta_y, eps_x, eps_y):
     rng = np.random.default_rng()
 
     r_x = np.arange(-coord_disp_x, coord_disp_x, 0.01)
+    gauss_x = stats.truncnorm.rvs(a_x, b_x, loc=mu_x, scale=sigma_x, size=10000)
     angle_distr_x = rng.uniform(0, 2*pi, 10000)
+    angle_distr_x *= gauss_x
     #angle_distr_x *= rng.uniform(0, 7.2)
+    gauss_y = stats.truncnorm.rvs(a_y, b_y, loc=mu_y, scale=sigma_y, size=3775)
     r_y = np.arange(-coord_disp_y, coord_disp_y, 0.01)
     angle_distr_y = rng.uniform(0, 2*pi, 3775)
+    angle_distr_y *= gauss_y
     #angle_distr_y = rng.normal(0, 3.3)
 
     x_ref = sqrt(eps_x * beta_x) * r_x * np.cos(angle_distr_x)
