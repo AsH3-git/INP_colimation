@@ -54,57 +54,52 @@ sy = np.hypot(tey0, y0/L)
 
 def beam_generator(alpha_x, alpha_y, beta_x, beta_y, eps_x, eps_y):
     """Function that generates beam distribution using np.random and other numpy tools. Should be equals to the pdf"""
-    mu_x, sigma_x = 0, 1         # Mean and standard deviation
-    lower_bound_x = -5 * sigma_x # -5 sigma
-    upper_bound_x = 5 * sigma_x  # +5 sigma
-
-    # Truncnorm requires standard bounds scaled by sigma
-    a_x = (lower_bound_x - mu_x) / sigma_x
-    b_x = (upper_bound_x - mu_x) / sigma_x
-
-    mu_y, sigma_y = 0, 1.2         # Mean and standard deviation
-    lower_bound_y = -5 * sigma_y # -5 sigma
-    upper_bound_y = 5 * sigma_y  # +5 sigma
-
-    # Truncnorm requires standard bounds scaled by sigma
-    a_y = (lower_bound_y - mu_y) / sigma_y
-    b_y = (upper_bound_y - mu_y) / sigma_y
-
-
     gf_x = gamma_func(alpha_x, beta_x)
-    gf_y = gamma_func(alpha_y, beta_y)
-    coord_disp_x = sqrt(eps_x * beta_x)
-    coord_disp_y = sqrt(eps_y * beta_y)
+    axis = np.linspace(-sqrt(eps_x * beta_x), sqrt(eps_x * beta_x), num=10000)
 
-    rng = np.random.default_rng()
+    mu_x, sigma_x = 0, 1    
+    mu_y, sigma_y = 0, 1.2  
 
-    r_x = np.arange(-coord_disp_x, coord_disp_x, 0.01)
-    gauss_x = stats.truncnorm.rvs(a_x, b_x, loc=mu_x, scale=sigma_x, size=10000)
-    angle_distr_x = rng.uniform(0, 2*pi, 10000)
-    angle_distr_x *= gauss_x
-    #angle_distr_x *= rng.uniform(0, 7.2)
-    gauss_y = stats.truncnorm.rvs(a_y, b_y, loc=mu_y, scale=sigma_y, size=3775)
-    r_y = np.arange(-coord_disp_y, coord_disp_y, 0.01)
-    angle_distr_y = rng.uniform(0, 2*pi, 3775)
-    angle_distr_y *= gauss_y
-    #angle_distr_y = rng.normal(0, 3.3)
+    gauss_x = np.random.normal(loc=mu_x, scale=sigma_x, size=10000)
+    gauss_x_hatch = np.random.normal(loc=mu_x, scale=sigma_x, size=10000)
 
-    x_ref = sqrt(eps_x * beta_x) * r_x * np.cos(angle_distr_x)
-    x_hatch_ref = sqrt(eps_x / beta_x) * alpha_x * r_x * np.cos(angle_distr_x) + sqrt(eps_x / beta_x) * r_x * np.sin(angle_distr_x)
+    mask = (gauss_x**2 + gauss_x_hatch**2) <= 25.0
+    coord_distr_x = gauss_x[mask]
+    angle_distr_x = gauss_x_hatch[mask]
 
-    y_ref = sqrt(eps_y * beta_y) * r_y * np.cos(angle_distr_y)
-    y_hatch_ref = sqrt(eps_y / beta_y) * alpha_y * r_y * np.cos(angle_distr_y) + sqrt(eps_y / beta_y) * r_y * np.sin(angle_distr_y)
+    x = np.sqrt(eps_x * beta_x) * coord_distr_x
+    x_prime = np.sqrt(eps_x / beta_x) * (-alpha_x * coord_distr_x + angle_distr_x)
+    x_plane = np.vstack((x, x_prime))
 
-    np.savetxt("2d_distr_coord_x.txt", x_ref)
-    np.savetxt("2d_distr_angle_x.txt", x_hatch_ref)
+    gauss_y = np.random.normal(loc=mu_x, scale=sigma_x, size=10000)
+    gauss_y_hatch = np.random.normal(loc=mu_x, scale=sigma_x, size=10000)
 
-    np.savetxt("2d_distr_coord_y.txt", y_ref)
-    np.savetxt("2d_distr_angle_y.txt", y_hatch_ref)
+    mask = (gauss_y**2 + gauss_y_hatch**2) <= 25.0
+    coord_distr_y = gauss_y[mask]
+    angle_distr_y = gauss_y_hatch[mask]
+
+    y = np.sqrt(eps_y * beta_y) * coord_distr_y
+    y_prime = np.sqrt(eps_y / beta_y) * (-alpha_y * coord_distr_y + angle_distr_y)
+    y_plane = np.vstack((y, y_prime))
+
+    four_dim_space = np.vstack((x_plane, y_plane))
+    print(np.shape(four_dim_space))
+    four_dim_space_arr = four_dim_space.T
+
+    np.savetxt("four_dim_space_distr.txt", four_dim_space_arr)
+
+    x0_prime = -axis * alpha_x/beta_x
+
+    plt.figure(figsize=(12,8))
+    plt.scatter(four_dim_space[0], four_dim_space[1], s=3, alpha=0.4)
+    plt.scatter(four_dim_space[2], four_dim_space[3], s=3, alpha=0.4)
+    plt.plot(axis, x0_prime, color="black")
+    plt.show()
 
 if __name__ == "__main__":
     beta_x = 100 #cm
     beta_y = 15 #cm
-    eps_x = 25 #nm*rad
+    eps_x = 0.25e-7 #cm*rad
     eps_y = 0.95 * eps_x #nm*rad
     alpha_x = 5 #cm
     alpha_y = 0.3 #cm

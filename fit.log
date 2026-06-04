@@ -1,0 +1,140 @@
+
+
+*******************************************************************************
+Thu Jun  4 16:50:57 2026
+
+
+FIT:    data read from "four_dim_space_distr.txt" u 1:2
+        format = x:z
+        #datapoints = 10000
+        residuals are weighted equally (unit weight)
+
+function used for fitting: a*x+b
+fitted parameters initialized with current variable values
+
+iter      chisq       delta/lim  lambda   a             b            
+   0 9.9993230258e+03   0.00e+00  7.07e-01    1.000000e+00   1.000000e+00
+   5 2.5298623719e-06  -3.81e-08  7.07e-06   -5.003799e-02   2.264005e-07
+
+After 5 iterations the fit converged.
+final sum of squares of residuals : 2.52986e-06
+rel. change during last iteration : -3.81186e-13
+
+degrees of freedom    (FIT_NDF)                        : 9998
+rms of residuals      (FIT_STDFIT) = sqrt(WSSR/ndf)    : 1.59071e-05
+variance of residuals (reduced chisquare) = WSSR/ndf   : 2.53037e-10
+
+Final set of parameters            Asymptotic Standard Error
+=======================            ==========================
+a               = -0.050038        +/- 9.916e-05    (0.1982%)
+b               = 2.26401e-07      +/- 1.591e-07    (70.28%)
+
+correlation matrix of the fit parameters:
+                a      b      
+a               1.000 
+b               0.021  1.000 
+
+
+*******************************************************************************
+Thu Jun  4 16:51:01 2026
+
+
+FIT:    data read from "four_dim_space_distr.txt" u 1:2
+        format = x:z
+        #datapoints = 10000
+        residuals are weighted equally (unit weight)
+
+function used for fitting: a*x+b
+fitted parameters initialized with current variable values
+
+iter      chisq       delta/lim  lambda   a             b            
+   0 2.5298623719e-06   0.00e+00  5.68e-05   -5.003799e-02   2.264005e-07
+   1 2.5298623719e-06   0.00e+00  5.68e-06   -5.003799e-02   2.264005e-07
+
+After 1 iterations the fit converged.
+final sum of squares of residuals : 2.52986e-06
+rel. change during last iteration : 0
+
+degrees of freedom    (FIT_NDF)                        : 9998
+rms of residuals      (FIT_STDFIT) = sqrt(WSSR/ndf)    : 1.59071e-05
+variance of residuals (reduced chisquare) = WSSR/ndf   : 2.53037e-10
+
+Final set of parameters            Asymptotic Standard Error
+=======================            ==========================
+a               = -0.050038        +/- 9.916e-05    (0.1982%)
+b               = 2.26401e-07      +/- 1.591e-07    (70.28%)
+
+correlation matrix of the fit parameters:
+                a      b      
+a               1.000 
+b               0.021  1.000 
+
+
+*******************************************************************************
+Thu Jun  4 16:51:41 2026
+
+
+FIT:    data read from "four_dim_space_distr.txt" u 3:4
+        format = x:z
+        #datapoints = 10000
+        residuals are weighted equally (unit weight)
+
+function used for fitting: c*x+d
+fitted parameters initialized with current variable values
+
+iter      chisq       delta/lim  lambda   c             d            
+   0 1.0000128027e+04   0.00e+00  7.07e-01    1.000000e+00   1.000000e+00
+   5 1.5474988730e-05  -3.07e-05  7.07e-06   -2.052535e-02  -8.067656e-07
+
+After 5 iterations the fit converged.
+final sum of squares of residuals : 1.5475e-05
+rel. change during last iteration : -3.07267e-10
+
+degrees of freedom    (FIT_NDF)                        : 9998
+rms of residuals      (FIT_STDFIT) = sqrt(WSSR/ndf)    : 3.93422e-05
+variance of residuals (reduced chisquare) = WSSR/ndf   : 1.54781e-09
+
+Final set of parameters            Asymptotic Standard Error
+=======================            ==========================
+c               = -0.0205254       +/- 0.00066      (3.216%)
+d               = -8.06766e-07     +/- 3.934e-07    (48.77%)
+
+correlation matrix of the fit parameters:
+                c      d      
+c               1.000 
+d              -0.009  1.000 
+
+
+*******************************************************************************
+Thu Jun  4 16:51:42 2026
+
+
+FIT:    data read from "four_dim_space_distr.txt" u 3:4
+        format = x:z
+        #datapoints = 10000
+        residuals are weighted equally (unit weight)
+
+function used for fitting: c*x+d
+fitted parameters initialized with current variable values
+
+iter      chisq       delta/lim  lambda   c             d            
+   0 1.5474988730e-05   0.00e+00  8.67e-06   -2.052535e-02  -8.067656e-07
+   1 1.5474988730e-05   0.00e+00  8.67e-07   -2.052535e-02  -8.067656e-07
+
+After 1 iterations the fit converged.
+final sum of squares of residuals : 1.5475e-05
+rel. change during last iteration : 0
+
+degrees of freedom    (FIT_NDF)                        : 9998
+rms of residuals      (FIT_STDFIT) = sqrt(WSSR/ndf)    : 3.93422e-05
+variance of residuals (reduced chisquare) = WSSR/ndf   : 1.54781e-09
+
+Final set of parameters            Asymptotic Standard Error
+=======================            ==========================
+c               = -0.0205254       +/- 0.00066      (3.216%)
+d               = -8.06766e-07     +/- 3.934e-07    (48.77%)
+
+correlation matrix of the fit parameters:
+                c      d      
+c               1.000 
+d              -0.009  1.000 
