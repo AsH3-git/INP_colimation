@@ -59,8 +59,8 @@ def beam_generator(alpha_x, alpha_y, beta_x, beta_y, eps_x, eps_y):
     x_prime = np.sqrt(eps_x / beta_x) * (-alpha_x * coord_distr_x + angle_distr_x)
     x_plane = np.vstack((x, x_prime))
 
-    gauss_y = np.random.normal(loc=mu_x, scale=sigma_x, size=10000)
-    gauss_y_hatch = np.random.normal(loc=mu_x, scale=sigma_x, size=10000)
+    gauss_y = np.random.normal(loc=mu_y, scale=sigma_y, size=10000)
+    gauss_y_hatch = np.random.normal(loc=mu_y, scale=sigma_y, size=10000)
 
     mask = (gauss_y**2 + gauss_y_hatch**2) <= 25.0
     coord_distr_y = gauss_y[mask]
@@ -96,10 +96,9 @@ def compton_backscattering(E_0, w_0, L, N, r_0):
     CBS_energy_distribution = omega_max(energy_distribution, w_0)
     test_mask = (CBS_energy_distribution == float("nan"))
     print(CBS_energy_distribution[test_mask])
-    CBS_angle = theta_omega(CBS_energy_distribution, w_0, CBS_max_energy)
+    #CBS_angle = theta_omega(CBS_energy_distribution, w_0, CBS_max_energy)
+    """
     epsilon = (CBS_energy_distribution) / (me * c**2)
-    
-    
     a_0 = (1 + epsilon) / epsilon**2
     b_1 = (2 + 2*epsilon)/(1 + 2*epsilon)
     b_2 = (np.log(1 + 2*epsilon))/(epsilon)
@@ -107,7 +106,7 @@ def compton_backscattering(E_0, w_0, L, N, r_0):
     b_4 = (1 + 3*epsilon)/(1 + 2*epsilon)**2
     Klein_Nishina_disp = 2*pi*r_0**2 * (a_0 * (b_1 - b_2) + b_3 - b_4)
     np.savetxt("spectra.txt", Klein_Nishina_disp)
-    
+    """
 
 if __name__ == "__main__":
     tex0 = 0.0001779/10
