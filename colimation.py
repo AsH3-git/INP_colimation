@@ -7,9 +7,11 @@ from scipy.integrate import quad, nquad
 from scipy.special import erf, i0
 import scipy.stats as stats
 from constants import *
-
+from numba import njit
+@njit
 def lam(E_0, w_0, alpha=pi):
     return (4 * E_0 * w_0 * sin(0.5*alpha)**2) / me**2
+@njit
 def omega_max(E_0, w_0, alpha=pi):
     return ((E_0 * lam(E_0, w_0)) / (1 + lam(E_0, w_0)))
 def theta_c(E_0, w_0):
@@ -103,23 +105,69 @@ def beam_generator(alpha_x, alpha_y, beta_x, beta_y, eps_x, eps_y, N_gen):
 
     return four_dim_space_energy, len(x)
 
+@njit
+def Klein_Nishina(E_0, w_0, w):
+    y = w / E_0
+    a_0 = 1 / (1 - y)
+    a_1 = (4 * y) / (lam(E_0, w_0)*(1 - y))
+    a_2 = (4 * y**2) / (lam(E_0, w_0)**2 * (1 - y)**2)
+    Klein_Nishina_distr = (2*pi*r_0**2) / (E_0 * lam(E_0, w_0)) * (a_0 + 1 - y - a_1 + a_2)
+    return Klein_Nishina_distr
+
+@njit
+def spectra_generator(energy_distribution, w0_gauss, num_samples):
+    accepted_samples_E = np.empty(num_samples)
+    accepted_samples_W = np.empty(num_samples)
+
+    n_elements = len(energy_distribution)
+
+    f_max = 0.0
+    for i in range(n_elements):
+        E_0 = energy_distribution[i]
+        w_0 = w0_gauss[i]
+        w_m = omega_max(E_0, w_0)
+
+        val_start = Klein_Nishina(E_0, w_0, 0.01 * w_m)
+        val_end = Klein_Nishina(E_0, w_0, w_m)
+
+        if val_start > f_max: f_max = val_start
+        if val_end > f_max: f_max = val_end
+
+    f_max *= 1.12
+
+    count = 0
+    while count < num_samples:
+        rand_idx = np.random.randint(0, n_elements)
+        E_rand = energy_distribution[rand_idx]
+        w0_rand = w0_gauss[rand_idx]
+
+        w_max_local = omega_max(E_rand, w0_rand)
+        w_rand = np.random.uniform(0.0, w_max_local)
+        y_rand = np.random.uniform(0.0, f_max)
+        f_val = Klein_Nishina(E_rand, w0_rand, w_rand)
+
+        if y_rand <= f_val:
+            accepted_samples_E[count] = E_rand
+            accepted_samples_W[count] = w_rand
+            count += 1
+    return accepted_samples_E, accepted_samples_W
+
 def compton_backscattering(E_0, w_0, L, r_0):
     four_dim_space_with_energy, N_compton = beam_generator(alpha_x, alpha_y, beta_x, beta_y, eps_x, eps_y, N_gen=int(1e6))
     CBS_max_energy = omega_max(E_0, w_0)
     energy_distribution = (four_dim_space_with_energy[4] + 1) * E_0
     CBS_energy_distribution = omega_max(energy_distribution, w_0)
-    w = np.random.uniform(0, CBS_energy_distribution, N_compton)
-    CBS_angle = theta_omega(energy_distribution, w_0, w)
     w0_gauss = np.random.normal(loc=2.35, scale=1e-4, size=N_compton)
     CBS_energy_distribution_with_gauss_omega0 = omega_max(energy_distribution, w0_gauss)
-    y = CBS_energy_distribution_with_gauss_omega0 / energy_distribution
-    #epsilon = (CBS_energy_distribution_with_gauss_omega0) / (me * c**2)
-    
-    a_0 = 1 / (1 - y)
-    a_1 = (4 * y) / (lam(energy_distribution, w0_gauss)*(1 - y))
-    a_2 = (4 * y**2) / (lam(energy_distribution, w0_gauss)**2 * (1 - y)**2)
-    Klein_Nishina_disp = (2*pi*r_0**2) / (energy_distribution * lam(energy_distribution, w0_gauss)) * (a_0 + 1 - y - a_1 + a_2)
-    np.savetxt("spectra.txt", Klein_Nishina_disp)
+
+    Klein_Nishina_energy_distr, Klein_Nishina_photon_energy_distr = spectra_generator(energy_distribution, w0_gauss, N_compton)
+    np.savetxt("Klein_Nishina.txt", Klein_Nishina_photon_energy_distr)
+
+    #w = np.random.uniform(0, CBS_max_energy, size=N_compton)
+    CBS_angle = theta_omega(Klein_Nishina_energy_distr, w0_gauss, Klein_Nishina_photon_energy_distr)
+    CBS_angle_with_energy = np.vstack((CBS_angle, Klein_Nishina_photon_energy_distr))
+    CBS_angle_with_energy = CBS_angle_with_energy.T
+    np.savetxt("angle.txt", CBS_angle_with_energy)
 
 if __name__ == "__main__":
     tex0 = 0.0001779/10
