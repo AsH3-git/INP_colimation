@@ -8,6 +8,7 @@ from scipy.special import erf, i0
 import scipy.stats as stats
 from constants import *
 from numba import njit
+
 @njit
 def lam(E_0, w_0, alpha=pi):
     return (4 * E_0 * w_0 * sin(0.5*alpha)**2) / me**2
@@ -31,17 +32,9 @@ def ellipsoid_hole(x, y, a, b):
         return 1
     else:
         return 0
+
 def gamma_func(alpha_func, beta_func):
     return (1 + alpha_func**2)/ beta_func
-
-#pdf -- particle distribution function
-def pdf(r, phi, phi0, r0, sx=0.5, sy=1):
-    x = (r*cos(phi) - r0*cos(phi0))/sx
-    y = (r*sin(phi) - r0*sin(phi0))/sy
-    return r*exp(-0.5*x**2 - 0.5*y**2) / 2/pi/sx/sy
-
-#sx = np.hypot(tex0, x0/L)
-#sy = np.hypot(tey0, y0/L)
 
 def beam_generator(alpha_x, alpha_y, beta_x, beta_y, eps_x, eps_y, N_gen):
     """Function that generates beam distribution using np.random and other numpy tools. Should be equals to the pdf"""
@@ -94,15 +87,7 @@ def beam_generator(alpha_x, alpha_y, beta_x, beta_y, eps_x, eps_y, N_gen):
     four_dim_space_arr = four_dim_space.T
 
     np.savetxt("four_dim_space_distr.txt", four_dim_space_arr)
-
-    #x0_prime = -axis * alpha_x/beta_x
-
-    plt.figure(figsize=(12,8))
-    plt.scatter(four_dim_space[0], four_dim_space[1], s=3, alpha=0.4)
-    plt.scatter(four_dim_space[2], four_dim_space[3], s=3, alpha=0.4)
-    #plt.plot(axis, x0_prime, color="black")
-    #plt.show()
-
+       
     return four_dim_space_energy, len(x)
 
 @njit
@@ -163,11 +148,85 @@ def compton_backscattering(E_0, w_0, L, r_0):
     Klein_Nishina_energy_distr, Klein_Nishina_photon_energy_distr = spectra_generator(energy_distribution, w0_gauss, N_compton)
     np.savetxt("Klein_Nishina.txt", Klein_Nishina_photon_energy_distr)
 
-    #w = np.random.uniform(0, CBS_max_energy, size=N_compton)
     CBS_angle = theta_omega(Klein_Nishina_energy_distr, w0_gauss, Klein_Nishina_photon_energy_distr)
     CBS_angle_with_energy = np.vstack((CBS_angle, Klein_Nishina_photon_energy_distr))
-    CBS_angle_with_energy = CBS_angle_with_energy.T
-    np.savetxt("angle.txt", CBS_angle_with_energy)
+    CBS_angle_with_energy_transpose = CBS_angle_with_energy.T
+    np.savetxt("angle.txt", CBS_angle_with_energy_transpose)
+
+    return CBS_angle_with_energy, w0_gauss, energy_distribution, four_dim_space_with_energy, N_compton
+
+@njit
+def colimation_cycle(CBS_angle_with_energy, N_compton, Klein_Nishina_photon_energy_distr, Klein_Nishina_energy_distr, four_dim_space_with_energy):
+    theta = CBS_angle_with_energy[0][:N_compton]
+    phi = np.random.uniform(0, 2*pi, N_compton)
+    theta_x = np.arcsin(np.cos(phi)*np.sin(theta))
+    theta_y = np.arcsin(np.sin(phi)*np.sin(theta))
+    
+    x_prime = -theta_x * Klein_Nishina_photon_energy_distr/Klein_Nishina_energy_distr
+    #print(np.shape(x_prime))
+    y_prime = -theta_y * Klein_Nishina_photon_energy_distr/Klein_Nishina_energy_distr
+
+    photon_x = np.empty(shape=N_compton)
+    photon_x_prime = np.empty(shape=N_compton)
+    photon_y = np.empty(shape=N_compton)
+    photon_y_prime = np.empty(shape=N_compton)
+
+    for i in range(N_compton):
+        photon_x[i] = four_dim_space_with_energy[0][i]
+        photon_x_prime[i] = (four_dim_space_with_energy[1][i] + x_prime[i])
+        photon_y[i] = four_dim_space_with_energy[2][i]
+        photon_y_prime[i] = (four_dim_space_with_energy[3][i] + y_prime[i])
+    
+    return photon_x, photon_x_prime, photon_y, photon_y_prime
+
+def hole_colimation(L, hole):
+    CBS_angle_with_energy, w0_gauss, energy_distribution, four_dim_space_with_energy, N_compton = compton_backscattering(E_0, w_0, L, r_0)
+    Klein_Nishina_energy_distr, Klein_Nishina_photon_energy_distr = spectra_generator(energy_distribution, w0_gauss, N_compton)
+    
+    photon_x, photon_x_prime, photon_y, photon_y_prime = colimation_cycle(CBS_angle_with_energy, N_compton, Klein_Nishina_photon_energy_distr, Klein_Nishina_energy_distr, four_dim_space_with_energy)
+
+    photon_x_plane = np.vstack((photon_x, photon_x_prime))
+    photon_y_plane = np.vstack((photon_y, photon_y_prime))
+    photon_4d_distr = np.vstack((photon_x_plane, photon_y_plane))
+    photon_4d_distr_with_energy = np.vstack((photon_4d_distr, Klein_Nishina_photon_energy_distr))
+    photon_4d_distr_with_energy_transpose = photon_4d_distr_with_energy.T
+    np.savetxt("photons_4d_distr.txt", photon_4d_distr_with_energy_transpose)
+    
+    empty_gap_matrix = np.array([[1, L, 0, 0], [0, 1, 0, 0], [0, 0, 1, L], [0, 0, 0, 1]])
+    photons_4d_distr_after_gap = empty_gap_matrix @ photon_4d_distr
+
+    mask_for_colimation = (photons_4d_distr_after_gap[0]**2 + photons_4d_distr_after_gap[2]**2 < hole**2)
+    x_after_colimation = photons_4d_distr_after_gap[0][mask_for_colimation]
+    y_after_colimation = photons_4d_distr_after_gap[2][mask_for_colimation]
+    x_prime_after_colimation = photons_4d_distr_after_gap[1][mask_for_colimation]
+    y_prime_after_colimation = photons_4d_distr_after_gap[3][mask_for_colimation]
+
+    x_plane_after_colimation = np.vstack((x_after_colimation, x_prime_after_colimation))
+    y_plane_after_colimation = np.vstack((y_after_colimation, y_prime_after_colimation))
+    photons_after_colimation = np.vstack((x_plane_after_colimation, y_plane_after_colimation))
+    
+    fig, axes = plt.subplots(2, 2, figsize=(12,8))
+    
+    axes[0][0].scatter(photon_4d_distr[0], photon_4d_distr[1], s=2, alpha=0.4)
+    axes[0][0].scatter(photon_4d_distr[2], photon_4d_distr[3], s=2, alpha=0.4)
+    axes[0][0].set_title("photons distribution")
+    #axes[0][0].set_aspect('equal')
+
+    axes[0][1].scatter(four_dim_space_with_energy[0], four_dim_space_with_energy[1], s=2, alpha=0.4)
+    axes[0][1].scatter(four_dim_space_with_energy[2], four_dim_space_with_energy[3], s=2, alpha=0.4)
+    axes[0][1].set_title("electrons distribution")
+    #axes[0][1].set_aspect('equal')
+
+    axes[1][0].scatter(photons_4d_distr_after_gap[0], photons_4d_distr_after_gap[2], s=2, alpha=0.4)
+    axes[1][0].set_title("photons distribution before colimation, (x,y) plane")
+    axes[1][0].set_aspect('equal', adjustable='box')
+
+    axes[1][1].scatter(photons_after_colimation[0], photons_after_colimation[2], s=2, alpha=0.4)
+    axes[1][1].set_title("photons distribution after colimation in (x,y) plane")
+    axes[1][1].set_aspect('equal', adjustable='box')
+
+    plt.tight_layout()
+    plt.show()
 
 if __name__ == "__main__":
     tex0 = 0.0001779/10
@@ -185,9 +244,10 @@ if __name__ == "__main__":
 
     beta_x = 1. #m
     beta_y = 0.15 #m
-    eps_x = 0.25e-5 #m*rad
+    eps_x = 0.25e-7 #m*rad
     eps_y = 0.95 * eps_x #m*rad
     alpha_x = 5.e-2 #m
     alpha_y = 3.e-3 #m
 
     compton_backscattering(E_0, w_0, L, r_0)
+    hole_colimation(L, hole)
