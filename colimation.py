@@ -112,13 +112,13 @@ def spectra_generator(energy_distribution, w0_gauss, num_samples):
         w_0 = w0_gauss[i]
         w_m = omega_max(E_0, w_0)
 
-        val_start = Klein_Nishina(E_0, w_0, 0.01 * w_m)
+        val_start = Klein_Nishina(E_0, w_0, 0.0)
         val_end = Klein_Nishina(E_0, w_0, w_m)
 
         if val_start > f_max: f_max = val_start
         if val_end > f_max: f_max = val_end
 
-    f_max *= 1.12
+    #f_max *= 1.12
 
     count = 0
     while count < num_samples:
@@ -138,7 +138,7 @@ def spectra_generator(energy_distribution, w0_gauss, num_samples):
     return accepted_samples_E, accepted_samples_W
 
 def compton_backscattering(E_0, w_0, L, r_0):
-    four_dim_space_with_energy, N_compton = beam_generator(alpha_x, alpha_y, beta_x, beta_y, eps_x, eps_y, N_gen=int(1e6))
+    four_dim_space_with_energy, N_compton = beam_generator(alpha_x, alpha_y, beta_x, beta_y, eps_x, eps_y, N_gen=int(1e5))
     CBS_max_energy = omega_max(E_0, w_0)
     energy_distribution = (four_dim_space_with_energy[4] + 1) * E_0
     CBS_energy_distribution = omega_max(energy_distribution, w_0)
@@ -154,58 +154,84 @@ def compton_backscattering(E_0, w_0, L, r_0):
     np.savetxt("angle.txt", CBS_angle_with_energy_transpose)
 
     return CBS_angle_with_energy, w0_gauss, energy_distribution, four_dim_space_with_energy, N_compton
-
+"""
 @njit
-def colimation_cycle(CBS_angle_with_energy, N_compton, Klein_Nishina_photon_energy_distr, Klein_Nishina_energy_distr, four_dim_space_with_energy):
+def bin_size_calculator(energy_array):
+    start_val = np.cumsum(energy_array)
+    mods = start_val % 1e6
+    condition = (mods >= 9.9e5) | (mods <= 1.9e5)
+
+    return np.sum(condition)
+"""
+
+def colimation_cycle(CBS_angle_with_energy, N_compton, four_dim_space_with_energy):
     theta = CBS_angle_with_energy[0][:N_compton]
-    phi = np.random.uniform(0, 2*pi, N_compton)
-    theta_x = np.arcsin(np.cos(phi)*np.sin(theta))
-    theta_y = np.arcsin(np.sin(phi)*np.sin(theta))
+    phi = np.random.uniform(0, 2 * np.pi, N_compton)
     
-    x_prime = -theta_x * Klein_Nishina_photon_energy_distr/Klein_Nishina_energy_distr
-    #print(np.shape(x_prime))
-    y_prime = -theta_y * Klein_Nishina_photon_energy_distr/Klein_Nishina_energy_distr
-
-    photon_x = np.empty(shape=N_compton)
-    photon_x_prime = np.empty(shape=N_compton)
-    photon_y = np.empty(shape=N_compton)
-    photon_y_prime = np.empty(shape=N_compton)
-
-    for i in range(N_compton):
-        photon_x[i] = four_dim_space_with_energy[0][i]
-        photon_x_prime[i] = (four_dim_space_with_energy[1][i] + x_prime[i])
-        photon_y[i] = four_dim_space_with_energy[2][i]
-        photon_y_prime[i] = (four_dim_space_with_energy[3][i] + y_prime[i])
+    theta_x = np.arcsin(np.cos(phi) * np.sin(theta))
+    theta_y = np.arcsin(np.sin(phi) * np.sin(theta))
+    """
+    theta_rec = np.sqrt(theta_x**2 + theta_y**2)
+    theta_recovered = np.vstack((theta_rec, CBS_angle_with_energy[1]))
+    theta_recovered = theta_recovered.T
+    np.savetxt("theta_rec.txt", theta_recovered)
+    """
+    photon_x = four_dim_space_with_energy[0][:N_compton]
+    photon_x_prime = four_dim_space_with_energy[1][:N_compton] + theta_x[:N_compton]
+    photon_y = four_dim_space_with_energy[2][:N_compton]
+    photon_y_prime = four_dim_space_with_energy[3][:N_compton] + theta_y[:N_compton]
     
     return photon_x, photon_x_prime, photon_y, photon_y_prime
 
-def hole_colimation(L, hole):
+def hole_colimation(L, hole, largest_diameter, smallest_diameter, rect_x_min, rect_x_max, rect_y_min, rect_y_max):
     CBS_angle_with_energy, w0_gauss, energy_distribution, four_dim_space_with_energy, N_compton = compton_backscattering(E_0, w_0, L, r_0)
-    Klein_Nishina_energy_distr, Klein_Nishina_photon_energy_distr = spectra_generator(energy_distribution, w0_gauss, N_compton)
-    
-    photon_x, photon_x_prime, photon_y, photon_y_prime = colimation_cycle(CBS_angle_with_energy, N_compton, Klein_Nishina_photon_energy_distr, Klein_Nishina_energy_distr, four_dim_space_with_energy)
+        
+    photon_x, photon_x_prime, photon_y, photon_y_prime = colimation_cycle(CBS_angle_with_energy, N_compton, four_dim_space_with_energy)
 
     photon_x_plane = np.vstack((photon_x, photon_x_prime))
     photon_y_plane = np.vstack((photon_y, photon_y_prime))
     photon_4d_distr = np.vstack((photon_x_plane, photon_y_plane))
-    photon_4d_distr_with_energy = np.vstack((photon_4d_distr, Klein_Nishina_photon_energy_distr))
+    photon_4d_distr_with_energy = np.vstack((photon_4d_distr, CBS_angle_with_energy[1]))
     photon_4d_distr_with_energy_transpose = photon_4d_distr_with_energy.T
     np.savetxt("photons_4d_distr.txt", photon_4d_distr_with_energy_transpose)
     
     empty_gap_matrix = np.array([[1, L, 0, 0], [0, 1, 0, 0], [0, 0, 1, L], [0, 0, 0, 1]])
     photons_4d_distr_after_gap = empty_gap_matrix @ photon_4d_distr
 
-    mask_for_colimation = (photons_4d_distr_after_gap[0]**2 + photons_4d_distr_after_gap[2]**2 < hole**2)
-    x_after_colimation = photons_4d_distr_after_gap[0][mask_for_colimation]
-    y_after_colimation = photons_4d_distr_after_gap[2][mask_for_colimation]
-    x_prime_after_colimation = photons_4d_distr_after_gap[1][mask_for_colimation]
-    y_prime_after_colimation = photons_4d_distr_after_gap[3][mask_for_colimation]
+    mask_for_circle_colimation = (photons_4d_distr_after_gap[0]**2 + photons_4d_distr_after_gap[2]**2 < hole**2)
+    x_after_circle_colimation = photons_4d_distr_after_gap[0][mask_for_circle_colimation]
+    y_after_circle_colimation = photons_4d_distr_after_gap[2][mask_for_circle_colimation]
+    x_prime_after_circle_colimation = photons_4d_distr_after_gap[1][mask_for_circle_colimation]
+    y_prime_after_circle_colimation = photons_4d_distr_after_gap[3][mask_for_circle_colimation]
 
-    x_plane_after_colimation = np.vstack((x_after_colimation, x_prime_after_colimation))
-    y_plane_after_colimation = np.vstack((y_after_colimation, y_prime_after_colimation))
-    photons_after_colimation = np.vstack((x_plane_after_colimation, y_plane_after_colimation))
+    x_plane_after_circle_colimation = np.vstack((x_after_circle_colimation, x_prime_after_circle_colimation))
+    y_plane_after_circle_colimation = np.vstack((y_after_circle_colimation, y_prime_after_circle_colimation))
+    photons_after_circle_colimation = np.vstack((x_plane_after_circle_colimation, y_plane_after_circle_colimation))
+    CBS_energy_after_circle_colimation = CBS_angle_with_energy[1][mask_for_circle_colimation]
     
-    fig, axes = plt.subplots(2, 2, figsize=(12,8))
+    mask_for_ellipsoidal_colimation = (photons_4d_distr_after_gap[0]**2 / largest_diameter**2 + photons_4d_distr_after_gap[2]**2 / smallest_diameter**2 < 1)
+    x_after_ellipsoidal_colimation = photons_4d_distr_after_gap[0][mask_for_ellipsoidal_colimation]
+    y_after_ellipsoidal_colimation = photons_4d_distr_after_gap[2][mask_for_ellipsoidal_colimation]
+    x_prime_after_ellipsoidal_colimation = photons_4d_distr_after_gap[1][mask_for_ellipsoidal_colimation]
+    y_prime_after_ellipsoidal_colimation = photons_4d_distr_after_gap[3][mask_for_ellipsoidal_colimation]
+
+    x_plane_after_ellipsoidal_colimation = np.vstack((x_after_ellipsoidal_colimation, x_prime_after_ellipsoidal_colimation))
+    y_plane_after_ellipsoidal_colimation = np.vstack((y_after_ellipsoidal_colimation, y_prime_after_ellipsoidal_colimation))
+    photons_after_ellipsoidal_colimation = np.vstack((x_plane_after_ellipsoidal_colimation, y_plane_after_ellipsoidal_colimation))
+    CBS_energy_after_ellipsoidal_colimation = CBS_angle_with_energy[1][mask_for_ellipsoidal_colimation]
+
+    mask_for_rectangle_colimation = ((photons_4d_distr_after_gap[0] > rect_x_min) & (photons_4d_distr_after_gap[0] < rect_x_max) & (photons_4d_distr_after_gap[2] > rect_y_min) & (photons_4d_distr_after_gap[2] < rect_y_max))
+    x_after_rectangle_colimation = photons_4d_distr_after_gap[0][mask_for_rectangle_colimation]
+    y_after_rectangle_colimation = photons_4d_distr_after_gap[2][mask_for_rectangle_colimation]
+    x_prime_after_rectangle_colimation = photons_4d_distr_after_gap[1][mask_for_rectangle_colimation]
+    y_prime_after_rectangle_colimation = photons_4d_distr_after_gap[3][mask_for_rectangle_colimation]
+
+    x_plane_after_rectangle_colimation = np.vstack((x_after_rectangle_colimation, x_prime_after_rectangle_colimation))
+    y_plane_after_rectangle_colimation = np.vstack((y_after_rectangle_colimation, y_prime_after_rectangle_colimation))
+    photons_after_rectangle_colimation = np.vstack((x_plane_after_rectangle_colimation, y_plane_after_rectangle_colimation))
+    CBS_energy_after_rectangle_colimation = CBS_angle_with_energy[1][mask_for_rectangle_colimation]
+
+    fig, axes = plt.subplots(3, 3, figsize=(12,8))
     
     axes[0][0].scatter(photon_4d_distr[0], photon_4d_distr[1], s=2, alpha=0.4)
     axes[0][0].scatter(photon_4d_distr[2], photon_4d_distr[3], s=2, alpha=0.4)
@@ -217,13 +243,39 @@ def hole_colimation(L, hole):
     axes[0][1].set_title("electrons distribution")
     #axes[0][1].set_aspect('equal')
 
-    axes[1][0].scatter(photons_4d_distr_after_gap[0], photons_4d_distr_after_gap[2], s=2, alpha=0.4)
-    axes[1][0].set_title("photons distribution before colimation, (x,y) plane")
+    axes[0][2].scatter(photons_4d_distr_after_gap[0], photons_4d_distr_after_gap[2], s=2, alpha=0.4)
+    axes[0][2].set_title("photons distribution before collimation, (x,y) plane")
+    axes[0][2].set_aspect('equal', adjustable='box')
+
+    axes[1][0].scatter(photons_after_circle_colimation[0], photons_after_circle_colimation[2], s=2, alpha=0.4)
+    axes[1][0].set_title("photons distribution after circle collimation in (x,y) plane")
     axes[1][0].set_aspect('equal', adjustable='box')
 
-    axes[1][1].scatter(photons_after_colimation[0], photons_after_colimation[2], s=2, alpha=0.4)
-    axes[1][1].set_title("photons distribution after colimation in (x,y) plane")
+    axes[1][1].scatter(photons_after_ellipsoidal_colimation[0], photons_after_ellipsoidal_colimation[2], s=2, alpha=0.4)
+    axes[1][1].set_title("photons distribution after ellipsoidal collimation in (x,y) plane")
     axes[1][1].set_aspect('equal', adjustable='box')
+
+    axes[1][2].scatter(photons_after_rectangle_colimation[0], photons_after_rectangle_colimation[2], s=2, alpha=0.4)
+    axes[1][2].set_title("photons distribution after rectangle collimation in (x,y) plane")
+    #axes[1][2].set_aspect('equal', adjustable='box')
+    """
+    bins_circle = bin_size_calculator(CBS_energy_after_circle_colimation)
+    print(bins_circle)
+    bins_ellipsoidal = bin_size_calculator(CBS_energy_after_ellipsoidal_colimation)
+    bins_rectangle = bin_size_calculator(CBS_energy_after_rectangle_colimation)
+    """
+    bins_size = np.histogram_bin_edges(CBS_angle_with_energy[1], bins=100)
+    axes[2][0].hist(CBS_angle_with_energy[1], bins=bins_size, histtype='step', fill=False)
+    axes[2][0].hist(CBS_energy_after_circle_colimation, bins=bins_size)
+    axes[2][0].set_title("CBS energy after circle collimation")
+
+    axes[2][1].hist(CBS_angle_with_energy[1], bins=bins_size, histtype='step', fill=False)
+    axes[2][1].hist(CBS_energy_after_ellipsoidal_colimation, bins=bins_size)
+    axes[2][1].set_title("CBS energy after ellipsoidal collimation")
+
+    axes[2][2].hist(CBS_angle_with_energy[1], bins=bins_size, histtype='step', fill=False)
+    axes[2][2].hist(CBS_energy_after_rectangle_colimation, bins=bins_size)
+    axes[2][2].set_title("CBS energy after rectangle collimation")
 
     plt.tight_layout()
     plt.show()
@@ -239,15 +291,21 @@ if __name__ == "__main__":
 
     L = 50. #m
 
-    hole = 5.e-4 #m
-    N_gen = int(1e6)
+    hole = 3.e-3 #m
+    largest_diameter = 3.5e-3
+    smallest_diameter = 2.e-3
+    rect_x_min = -3.e-3
+    rect_x_max = 3e-3
+    rect_y_min = -2.e-3
+    rect_y_max = 2.e-3
+    N_gen = int(1e5)
 
     beta_x = 1. #m
     beta_y = 0.15 #m
-    eps_x = 0.25e-7 #m*rad
-    eps_y = 0.95 * eps_x #m*rad
+    eps_x = 0.25e-13 #m*rad
+    eps_y = 0.05 * eps_x #m*rad
     alpha_x = 5.e-2 #m
     alpha_y = 3.e-3 #m
 
     compton_backscattering(E_0, w_0, L, r_0)
-    hole_colimation(L, hole)
+    hole_colimation(L, hole, largest_diameter, smallest_diameter, rect_x_min, rect_x_max, rect_y_min, rect_y_max)
