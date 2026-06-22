@@ -79,7 +79,9 @@ def beam_generator(alpha_x, alpha_y, beta_x, beta_y, eps_x, eps_y, N_gen):
     #print(np.shape(x_plane))
     #print(np.shape(y_plane))
 
-    delta_E = np.random.normal(loc=0.0, scale=5e-3, size=len(y))
+    #delta_E = np.random.normal(loc=0.0, scale=5e-3, size=len(y))
+    #for VEPP-4M
+    delta_E = np.random.normal(loc=0.0, scale=2.9e-3, size=len(y))
 
     four_dim_space = np.vstack((x_plane, y_plane))
     four_dim_space_energy = np.vstack((four_dim_space, delta_E))
@@ -138,7 +140,7 @@ def spectra_generator(energy_distribution, w0_gauss, num_samples):
     return accepted_samples_E, accepted_samples_W
 
 def compton_backscattering(E_0, w_0, L, r_0):
-    four_dim_space_with_energy, N_compton = beam_generator(alpha_x, alpha_y, beta_x, beta_y, eps_x, eps_y, N_gen=int(1e5))
+    four_dim_space_with_energy, N_compton = beam_generator(alpha_x, alpha_y, beta_x, beta_y, eps_x, eps_y, N_gen=int(6e4))
     CBS_max_energy = omega_max(E_0, w_0)
     energy_distribution = (four_dim_space_with_energy[4] + 1) * E_0
     CBS_energy_distribution = omega_max(energy_distribution, w_0)
@@ -203,6 +205,9 @@ def hole_colimation(L, hole, largest_diameter, smallest_diameter, rect_x_min, re
     y_after_circle_colimation = photons_4d_distr_after_gap[2][mask_for_circle_colimation]
     x_prime_after_circle_colimation = photons_4d_distr_after_gap[1][mask_for_circle_colimation]
     y_prime_after_circle_colimation = photons_4d_distr_after_gap[3][mask_for_circle_colimation]
+    circle_col = np.vstack((x_after_circle_colimation, y_after_circle_colimation))
+    circle_col = circle_col.T
+    np.savetxt("circle.txt", circle_col)
 
     x_plane_after_circle_colimation = np.vstack((x_after_circle_colimation, x_prime_after_circle_colimation))
     y_plane_after_circle_colimation = np.vstack((y_after_circle_colimation, y_prime_after_circle_colimation))
@@ -285,27 +290,37 @@ if __name__ == "__main__":
     x0 = 0.0001686/10
     tey0 = 2.23998e-06
     y0 = 1.339297e-05/10
-    E_0 = 2.0e9 #eV
-    w_0 = h * c / 527e-9 / e
+    #E_0 = 2.0e9 #eV
+    #w_0 = h * c / 527e-9 / e
+    #VEPP-4M params
+    E_0 = 1.8e6
+    w_0 = 2.33 
     r_0 = 2.8179e-15
+    eps_x = 2.5e-8
+    eps_y = 0.05*eps_x
+    beta_x = 0.75
+    beta_y = 0.05
+    alpha_x = 0
+    alpha_y = 0
 
-    L = 50. #m
 
-    hole = 3.e-3 #m
+    L = 18. #m
+
+    hole = 4.e-3 #m
     largest_diameter = 3.5e-3
     smallest_diameter = 2.e-3
     rect_x_min = -3.e-3
     rect_x_max = 3e-3
     rect_y_min = -2.e-3
     rect_y_max = 2.e-3
-    N_gen = int(1e5)
-
+    N_gen = int(6e4)
+    """
     beta_x = 1. #m
     beta_y = 0.15 #m
     eps_x = 0.25e-13 #m*rad
     eps_y = 0.05 * eps_x #m*rad
     alpha_x = 5.e-2 #m
     alpha_y = 3.e-3 #m
-
+    """
     compton_backscattering(E_0, w_0, L, r_0)
     hole_colimation(L, hole, largest_diameter, smallest_diameter, rect_x_min, rect_x_max, rect_y_min, rect_y_max)
