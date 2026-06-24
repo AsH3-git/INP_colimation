@@ -40,7 +40,7 @@ $
 Возникает задача вычислить полное угловое сечение фотонов ОКР для дальнейших расчетов и моделирования.
 
 $
-d sigma_c = (2 omega_"max" r^2_e)/(E^2_0 lambda theta^2_c (1 + (theta_gamma/theta_c)^2)^2) 
+(d sigma_c)/(d Omega) = (2 omega_"max" r^2_e)/(E^2_0 lambda theta^2_c (1 + (theta_gamma/theta_c)^2)^2) 
 [1/(1 - y(theta_gamma)) + 1 - y(theta_gamma) - (4 y(theta_gamma))/(lambda (1 - y(theta_gamma))) + (4 y^2(theta_gamma))
 /(lambda^2 (1 - y(theta_gamma))^2)] \
 "пусть" zeta = theta^2_c (1 + (theta_gamma/theta_c)^2)^2 , "тогда, выражая через" y(theta_gamma) \
@@ -259,14 +259,14 @@ $
 sigma_Omega = -(2 r^2_e)/(lambda E_0 theta_c){- (omega_"max")/(2 E_0) {pi/2 (1 + e^((-theta_c omega_"max")/(2 E_0))) Si(theta_c Delta) 
 - Im[e^(i theta_c Delta) E_1(i theta_c (Delta + (i omega_"max")/(2 E_0)))]} -\
 -omega_"max"/E_0 {(i e^(-theta_c))/4 Im[E(i theta_c Delta)] - (i e^(theta_c))/4 Im[E(i theta_c Delta)] 
-+ e^(i theta_c Delta - theta_c)/(4 Delta) - \ 
-- e^(-theta_c)/4 Re[theta_c E(i theta_c Delta)] + e^(i theta_c Delta + theta_c)/(4 Delta) - e^(theta_c)/4 
++ e^(i theta_c Delta - theta_c)/(4 Delta) + \ 
++ e^(-theta_c)/4 Re[theta_c E(i theta_c Delta)] + e^(i theta_c Delta + theta_c)/(4 Delta) + e^(theta_c)/4 
 Re[theta_c E(i theta_c Delta)]} -\
 - (omega_"max"/E_0)^2 {(Delta (3 Delta^2 + 5) sin(theta_c Delta))/(8 (Delta^2 + 1)^2) + 
 (theta_c cos(theta_c Delta))/(8 (Delta^2 + 1)) - ((theta^2_c - 3 theta_c + 3) e^(theta_c))/(16) dot \
 dot Re[E_1(theta_c - i theta_c Delta)] + ((theta_c^2 + 3 theta_c + 3) e^(-theta_c))/(16) Re[E_1(-theta_c - i 
 theta_c Delta)]} +\
-+ (4 omega^2_"max")/(E^2_0 lambda) lr(\{, size: #300%) -E^2_0/omega^3_"max" (pi/2 e^(-theta_c) - 1/2[e^(-theta_c) 
++ (4 omega^2_"max")/(E^2_0 lambda) { -E^2_0/omega^3_"max" (pi/2 e^(-theta_c) - 1/2[e^(-theta_c) 
 Re[E_1(theta_c - i theta_c Delta)] + e^(theta_c) Re[E_1(-theta_c - i theta_c Delta)]]) - \
 - E_0/omega^2_"max" ((Delta sin(theta_c Delta))/(2 (Delta^2 + 1)) + (theta_c - 1)/4 e^(theta_c) 
 Re[E_1(theta_c - i theta_c Delta)] + (theta_c + 1)/4 e^(-theta_c) dot \
@@ -277,7 +277,7 @@ dot Re[E_1(theta_c - i theta_c Delta)] + \
 + ((theta^2_c + 3 theta_c + 3) e^(-theta_c))/(16) 
 Re[E_1(- theta_c - i theta_c Delta)]) + E^3_0/omega^3_"max" dot \ 
 dot (pi/(2 c) e^(-theta_c c) - 1/(2 c) [e^(-theta_c c) Re[E_1(theta_c c - i theta_c Delta)] + e^(theta_c c) 
-Re[E_1(-theta_c c - i theta_c Delta)]])lr(}, size: #300%) - \
+Re[E_1(-theta_c c - i theta_c Delta)]])} - \
 - (4 omega^3_"max")/(E^2_0 lambda^2) {-1/omega_"max" ((Delta sin(theta_c Delta))/(2(Delta^2 + 1)) + 
 (theta_c cos(theta_c Delta))/(8(Delta^2 + 1)) - ((theta_c^2 - 3theta_c + 3)e^(theta_c))/(16) dot \
 dot Re[E_1(theta_c - i theta_c Delta)] + ((theta^2_c - 3theta_c + 3)e^(-theta_c))/(16) 
