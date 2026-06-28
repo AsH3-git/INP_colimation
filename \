@@ -213,8 +213,8 @@ def analytic_distr_gen(photon_x, photon_y, N_compton, CBS_angle, eps_x, beta_x, 
 def analytic_hole_colimation(Gauss, N_compton, L, hole, largest_diameter, smallest_diameter, rect_x_min, rect_x_max, rect_y_min, rect_y_max):
     beam_nearby_hole = np.fft.fft2(Gauss)
     #beam_centered = np.fft.fftshift(beam_nearby_hole)
-    x = np.linspace(-1e-2, 1e-2, N_compton)
-    y = np.linspace(-1e-2, 1e-2, N_compton)
+    x = np.linspace(-1, 1, N_compton)
+    y = np.linspace(-1, 1, N_compton)
     circle_mask = (x**2 + y**2 < hole**2)
     ellips_mask = ((x/largest_diameter)**2 + (y/smallest_diameter)**2 < 1.0)
     rectangle_mask = (x > rect_x_min) & (x < rect_x_max) & (y > rect_y_min) & (y < rect_y_max)
@@ -226,7 +226,6 @@ def analytic_hole_colimation(Gauss, N_compton, L, hole, largest_diameter, smalle
     F_circle = np.fft.fft2(circle_plane)
     #F_ellips = np.fft.fft2(ellips)
     #F_rect = np.fft.fft2(rectangle)
-    #F_circle = 2 * pi * hole * i0(2 * pi * hole)
     circle_colimation_bias = beam_nearby_hole * F_circle
     circle_colimation = np.fft.fftshift(circle_colimation_bias)
     #ellips_colimation = beam_nearby_hole * F_ellips
