@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import time
 from math import sin, cos, sqrt, pi, exp, atan2, hypot
 from scipy.integrate import quad, nquad
+from scipy.signal import fftconvolve, convolve2d
 from scipy.special import erf, i0
 import scipy.stats as stats
 from constants import *
@@ -40,13 +41,18 @@ def gamma_func(alpha_func, beta_func):
 def beam_generator(alpha_x, alpha_y, beta_x, beta_y, eps_x, eps_y, N_gen):
     """Function that generates beam distribution using np.random and other numpy tools. Should be equals to the pdf"""
     gf_x = gamma_func(alpha_x, beta_x)
+    gf_y = gamma_func(alpha_y, beta_y)
     #axis = np.linspace(-sqrt(eps_x * beta_x), sqrt(eps_x * beta_x), num=10000)
 
-    mu_x, sigma_x = 0, 1    
-    mu_y, sigma_y = 0, 1.2  
+    mu_x = 0
+    sigma_x = sqrt(eps_x * beta_x)
+    sigma_x_hatch = sqrt(eps_x * gf_x)
+    mu_y = 0
+    sigma_y = sqrt(eps_y * beta_y)
+    sigma_y_hatch = sqrt(eps_y * gf_y)
 
     gauss_x = np.random.normal(loc=mu_x, scale=sigma_x, size=N_gen)
-    gauss_x_hatch = np.random.normal(loc=mu_x, scale=sigma_x, size=N_gen)
+    gauss_x_hatch = np.random.normal(loc=mu_x, scale=sigma_x_hatch, size=N_gen)
 
     mask = (gauss_x**2 + gauss_x_hatch**2) <= 25.0
     coord_distr_x = gauss_x[mask]
@@ -57,7 +63,7 @@ def beam_generator(alpha_x, alpha_y, beta_x, beta_y, eps_x, eps_y, N_gen):
     x_plane = np.vstack((x, x_prime))
 
     gauss_y = np.random.normal(loc=mu_y, scale=sigma_y, size=N_gen)
-    gauss_y_hatch = np.random.normal(loc=mu_y, scale=sigma_y, size=N_gen)
+    gauss_y_hatch = np.random.normal(loc=mu_y, scale=sigma_y_hatch, size=N_gen)
 
     mask = (gauss_y**2 + gauss_y_hatch**2) <= 25.0
     coord_distr_y = gauss_y[mask]
@@ -91,7 +97,7 @@ def beam_generator(alpha_x, alpha_y, beta_x, beta_y, eps_x, eps_y, N_gen):
 
     np.savetxt("four_dim_space_distr.txt", four_dim_space_arr)
        
-    return four_dim_space_energy, len(x)
+    return four_dim_space_energy, len(x), sigma_x, sigma_x_hatch, sigma_y, sigma_y_hatch
 
 @njit
 def Klein_Nishina(E_0, w_0, w):
@@ -141,7 +147,7 @@ def spectra_generator(energy_distribution, w0_gauss, num_samples):
     return accepted_samples_E, accepted_samples_W
 
 def compton_backscattering(E_0, w_0, L, r_0):
-    four_dim_space_with_energy, N_compton = beam_generator(alpha_x, alpha_y, beta_x, beta_y, eps_x, eps_y, N_gen=int(6e4))
+    four_dim_space_with_energy, N_compton, sigma_x, sigma_x_hatch, sigma_y, sigma_y_hatch = beam_generator(alpha_x, alpha_y, beta_x, beta_y, eps_x, eps_y, N_gen=int(6e4))
     CBS_max_energy = omega_max(E_0, w_0)
     energy_distribution = (four_dim_space_with_energy[4] + 1) * E_0
     CBS_energy_distribution = omega_max(energy_distribution, w_0)
@@ -156,7 +162,7 @@ def compton_backscattering(E_0, w_0, L, r_0):
     CBS_angle_with_energy_transpose = CBS_angle_with_energy.T
     np.savetxt("angle.txt", CBS_angle_with_energy_transpose)
 
-    return CBS_angle_with_energy, w0_gauss, energy_distribution, four_dim_space_with_energy, N_compton
+    return CBS_angle_with_energy, w0_gauss, energy_distribution, four_dim_space_with_energy, N_compton, sigma_x, sigma_x_hatch, sigma_y, sigma_y_hatch
 """
 @njit
 def bin_size_calculator(energy_array):
@@ -187,63 +193,66 @@ def colimation_cycle(CBS_angle_with_energy, N_compton, four_dim_space_with_energ
     return photon_x, photon_x_prime, photon_y, photon_y_prime
 
 @njit
-def analytic_distr_gen(photon_x, photon_y, N_compton, CBS_angle, eps_x, beta_x, L):
-    sigma_x = sqrt(eps_x * beta_x)
+def analytic_distr_gen(photon_x, photon_y, N_compton, CBS_angle, sigma_x, sigma_y, sigma_x_hatch, sigma_y_hatch, L):
     accepted_x = np.empty(N_compton)
     accepted_y = np.empty(N_compton)
     n_el = N_compton
-    f_max = (N_compton * 10 * sqrt(2))/(2 * pi * sigma_x) * np.exp((-(max(photon_x) + max(CBS_angle) * L)**2 + 200*(max(photon_y) + max(CBS_angle) * L)**2)/(sigma_x**2))
+    sigma_hat_x = sqrt(sigma_x**2/L**2 - sigma_x_hatch**2)
+    sigma_hat_y = sqrt(sigma_y**2/L**2 - sigma_y_hatch**2)
+    f_max = N_compton/(2 * pi * sigma_hat_x * sigma_hat_y) * np.exp(-1/2 * ((max(photon_x) + L * max(CBS_angle))**2/sigma_hat_x**2 + (max(photon_y) + L*max(CBS_angle))**2/sigma_hat_y**2))
     count = 0
 
     while count < N_compton:
         rand_idx = np.random.randint(0, n_el)
-        theta_rand = CBS_angle[rand_idx]
+        theta = CBS_angle[rand_idx]
         x_rand = photon_x[rand_idx]
         y_rand = photon_y[rand_idx]
-        x = np.random.uniform(0.0, x_rand)
-        y = np.random.uniform(0.0, y_rand)
+        x = x_rand + L * theta
+        y = y_rand + L * theta
+        x_hat = np.random.uniform(0.0, x)
+        y_hat = np.random.uniform(0.0, y)
         rand_val = np.random.uniform(0.0, f_max)
-        f_val = (N_compton * 10 * sqrt(2))/(2 * pi * sigma_x) * np.exp((-(x + theta_rand * L)**2 + 200*(y + theta_rand * L)**2)/(sigma_x**2))
+        f_val = N_compton/(2*pi*sigma_hat_x*sigma_hat_y)*np.exp(-1/2*((x_hat - theta)**2/sigma_hat_x**2 + (y_hat - theta)**2/sigma_hat_y**2))
         if rand_val <= f_val:
-            accepted_x[count] = x
-            accepted_y[count] = y
+            accepted_x[count] = x_hat
+            accepted_y[count] = y_hat
             count += 1
-    return accepted_x, accepted_y
 
-def analytic_hole_colimation(Gauss, N_compton, L, hole, largest_diameter, smallest_diameter, rect_x_min, rect_x_max, rect_y_min, rect_y_max):
-    beam_nearby_hole = np.fft.fft2(Gauss)
-    #beam_centered = np.fft.fftshift(beam_nearby_hole)
-    x = np.linspace(-1e-2, 1e-2, N_compton)
-    y = np.linspace(-1e-2, 1e-2, N_compton)
-    circle_mask = (x**2 + y**2 < hole**2)
-    ellips_mask = ((x/largest_diameter)**2 + (y/smallest_diameter)**2 < 1.0)
-    rectangle_mask = (x > rect_x_min) & (x < rect_x_max) & (y > rect_y_min) & (y < rect_y_max)
-    circle_x = x[circle_mask]
-    circle_y = y[circle_mask]
-    circle_plane = np.vstack((circle_x, circle_y))
-    #ellips = plane[ellips_mask]
-    #rectangle = plane[rectangle_mask]
-    F_circle = np.fft.fft2(circle_plane)
-    #F_ellips = np.fft.fft2(ellips)
-    #F_rect = np.fft.fft2(rectangle)
-    #F_circle = 2 * pi * hole * i0(2 * pi * hole)
-    circle_colimation_bias = beam_nearby_hole * F_circle
-    circle_colimation = np.fft.fftshift(circle_colimation_bias)
-    #ellips_colimation = beam_nearby_hole * F_ellips
-    #rect_colimation = beam_nearby_hole * F_rect
+    coord_distr_in_angle = np.vstack((accepted_x, accepted_y))
+    
+    return coord_distr_in_angle
+
+def analytic_hole_colimation(angle_distr, CBS_angle, N_compton, L, hole, largest_diameter, smallest_diameter, rect_x_min, rect_x_max, rect_y_min, rect_y_max):
+    """
+    phi = np.linspace(0, 2 * pi, num = len(angle_distr))
+    x_circ = hole * np.cos(phi)
+    y_circ = hole * np.sin(phi)
+    circle = np.vstack((x_circ, y_circ))
+    circle_colimation = np.fft.fft2(circle) * np.fft.fft(angle_distr)
+    """
+    total_angle_distr = np.fft.fft(CBS_angle) * np.fft.fft(angle_distr)
+    print(total_angle_distr)
+
+    d_theta = abs(angle_distr[1]) - abs(angle_distr[0])
+    print(d_theta)
+    x_colimator = np.arange(-hole, hole, d_theta)
+    colimator_1d = 2 * np.sqrt(np.maximum(0, hole**2 - x_colimator**2))
+    colimator_1d_norm = colimator_1d / (np.sum(colimator_1d) * d_theta)
+    circle_colimation = convolve(total_angle_distr, colimator_1d_norm, method='direct')
 
     return circle_colimation#, ellips_colimation, rect_colimation
 
 def numerical_hole_colimation(L, hole, largest_diameter, smallest_diameter, rect_x_min, rect_x_max, rect_y_min, rect_y_max, beta_x, eps_x):
-    CBS_angle_with_energy, w0_gauss, energy_distribution, four_dim_space_with_energy, N_compton = compton_backscattering(E_0, w_0, L, r_0)
+    CBS_angle_with_energy, w0_gauss, energy_distribution, four_dim_space_with_energy, N_compton, sigma_x, sigma_x_hatch, sigma_y, sigma_y_hatch = compton_backscattering(E_0, w_0, L, r_0)
         
     photon_x, photon_x_prime, photon_y, photon_y_prime = colimation_cycle(CBS_angle_with_energy, N_compton, four_dim_space_with_energy)
     
-    x_gauss, y_gauss = analytic_distr_gen(photon_x, photon_y, N_compton, CBS_angle_with_energy[0], eps_x, beta_x, L)
-    Gauss = np.vstack((x_gauss, y_gauss))
+    coord_distr_in_angle = analytic_distr_gen(photon_x, photon_y, N_compton, CBS_angle_with_energy[0], sigma_x, sigma_y, sigma_x_hatch, sigma_y_hatch, L)
     #np.savetxt("analytic_gauss.txt", Gauss)
+    #print(np.shape(total_angle_distr))
     
-    analyt_circ_col = analytic_hole_colimation(Gauss, N_compton, L, hole, largest_diameter, smallest_diameter, rect_x_min, rect_x_max, rect_y_min, rect_y_max)
+    analyt_circ_col = analytic_hole_colimation(coord_distr_in_angle, CBS_angle_with_energy[0], N_compton, L, hole, largest_diameter, smallest_diameter, rect_x_min, rect_x_max, rect_y_min, rect_y_max)
+    #print(analyt_circ_col)
 
     photon_x_plane = np.vstack((photon_x, photon_x_prime))
     photon_y_plane = np.vstack((photon_y, photon_y_prime))
@@ -308,7 +317,7 @@ def numerical_hole_colimation(L, hole, largest_diameter, smallest_diameter, rect
     axes[0][2].set_aspect('equal', adjustable='box')
 
     axes[1][0].scatter(photons_after_circle_colimation[0], photons_after_circle_colimation[2], s=2, alpha=0.4)
-    axes[1][0].scatter(analyt_circ_col[0], analyt_circ_col[1], s=2, alpha=0.4)
+    #axes[1][0].scatter(analyt_circ_col[0], analyt_circ_col[1], s=2, alpha=0.4)
     axes[1][0].set_title("photons distribution after circle collimation in (x,y) plane")
     axes[1][0].set_aspect('equal', adjustable='box')
 
@@ -328,6 +337,7 @@ def numerical_hole_colimation(L, hole, largest_diameter, smallest_diameter, rect
     bins_size = np.histogram_bin_edges(CBS_angle_with_energy[1], bins=100)
     axes[2][0].hist(CBS_angle_with_energy[1], bins=bins_size, histtype='step', fill=False)
     axes[2][0].hist(CBS_energy_after_circle_colimation, bins=bins_size)
+    axes[2][0].hist(analyt_circ_col, bins=bins_size)
     axes[2][0].set_title("CBS energy after circle collimation")
 
     axes[2][1].hist(CBS_angle_with_energy[1], bins=bins_size, histtype='step', fill=False)
